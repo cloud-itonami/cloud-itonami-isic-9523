@@ -1,4 +1,4 @@
-# cloud-itonami-9523
+# cloud-itonami-isic-9523
 
 Open Business Blueprint for **ISIC Rev.5 9523**: Repair of footwear and leather goods.
 

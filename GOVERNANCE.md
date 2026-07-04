@@ -1,6 +1,6 @@
 # Governance
 
-`cloud-itonami-9523` is an OSS open-business blueprint for repair of footwear and leather goods -- diagnosing and repairing shoes, bags, belts and similar goods for customers.
+`cloud-itonami-isic-9523` is an OSS open-business blueprint for repair of footwear and leather goods -- diagnosing and repairing shoes, bags, belts and similar goods for customers.
 Governance covers both the capability layer and the operator model.
 
 ## Maintainers

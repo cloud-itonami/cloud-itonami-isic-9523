@@ -2,7 +2,7 @@
 
 ## Classification
 
-- Repository: `cloud-itonami-9523`
+- Repository: `cloud-itonami-isic-9523`
 - ISIC Rev.5: `9523`
 - Activity: repair of footwear and leather goods -- diagnosing and repairing shoes, bags, belts and similar goods for customers
 - Social impact: community access, data sovereignty, transparent audit

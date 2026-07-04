@@ -1,4 +1,4 @@
-{:itonami.blueprint/id "cloud-itonami-9523"
+{:itonami.blueprint/id "cloud-itonami-isic-9523"
  :itonami.blueprint/name "Repair of footwear and leather goods"
  :itonami.blueprint/isic-rev5 "9523"
  :itonami.blueprint/domain :services/repair-footwear-leather
