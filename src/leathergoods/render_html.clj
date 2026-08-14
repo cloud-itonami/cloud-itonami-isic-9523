@@ -30,7 +30,16 @@
   The scenario deliberately exercises ALL SEVEN of the governor's HARD
   (un-overridable) rules -- `-main` refuses to write a page that
   produced zero governor holds, so the HARD-hold requirement is a
-  build-time invariant rather than a convention.
+  build-time invariant rather than a convention. Verified in BOTH
+  directions: with the hold steps removed, `-main` throws and writes no
+  file; unmodified, it writes and exits 0.
+
+  Measured shape of one run (re-derive rather than cite -- these are
+  outputs, not settings): 14 graph threads; 40 facts on the run-level
+  audit channel (14 advisor proposals, 7 commits, 6 approval-requested,
+  6 approval-granted, 7 governor-holds) against 14 facts in the durable
+  store ledger (7 commits + 7 holds). The 12 approval facts are exactly
+  what the ledger does not keep.
 
   Usage: `clojure -M:dev:render-html [out-file]`
   (default `docs/samples/operator-console.html`)."
