@@ -2502,13 +2502,13 @@ img,svg { max-width: 100%; height: auto; }</style></head><body>
     <table>
       <thead><tr><th>Rule</th><th>Op</th><th>Ticket</th><th>Governor detail</th><th>Advisor confidence</th></tr></thead>
       <tbody>
-        <tr><td><code>no-spec-basis</code></td><td><code>assess</code></td><td><code>ticket-2</code></td><td>公式spec-basisの引用が無い提案は法域要件として扱えない</td><td>0.9</td></tr>
-        <tr><td><code>parts-cost-mismatch</code></td><td><code>complete</code></td><td><code>ticket-3</code></td><td>ticket-3 の申告部品代金(60.0)が独立再計算値(40.0)と一致しない</td><td>0.3</td></tr>
-        <tr><td><code>safety-test-not-passed</code></td><td><code>screen</code></td><td><code>ticket-4</code></td><td>修理後安全試験に合格していない品目を返却する提案は進められない</td><td>0.95</td></tr>
-        <tr><td><code>evidence-incomplete</code></td><td><code>complete</code></td><td><code>ticket-4</code></td><td>法域の必要書類(故障診断書/使用部品記録/安全試験記録/ブランド真贋確認記録等)が充足していない状態での提案</td><td>0.9</td></tr>
-        <tr><td><code>brand-authenticity-unconfirmed</code></td><td><code>screen</code></td><td><code>ticket-5</code></td><td>ticket-5 はブランド品だがブランド真贋確認が未完了 -- 修理完了/返却提案は進められない</td><td>0.95</td></tr>
-        <tr><td><code>already-completed</code></td><td><code>complete</code></td><td><code>ticket-1</code></td><td>ticket-1 は既に修理完了済み</td><td>0.9</td></tr>
-        <tr><td><code>already-returned</code></td><td><code>return</code></td><td><code>ticket-1</code></td><td>ticket-1 は既に返却済み</td><td>0.9</td></tr>
+        <tr><td><code>no-spec-basis</code></td><td><code>jurisdiction/assess</code></td><td><code>ticket-2</code></td><td>公式spec-basisの引用が無い提案は法域要件として扱えない</td><td>0.9</td></tr>
+        <tr><td><code>parts-cost-mismatch</code></td><td><code>repair/complete</code></td><td><code>ticket-3</code></td><td>ticket-3 の申告部品代金(60.0)が独立再計算値(40.0)と一致しない</td><td>0.3</td></tr>
+        <tr><td><code>safety-test-not-passed</code></td><td><code>safety/screen</code></td><td><code>ticket-4</code></td><td>修理後安全試験に合格していない品目を返却する提案は進められない</td><td>0.95</td></tr>
+        <tr><td><code>evidence-incomplete</code></td><td><code>repair/complete</code></td><td><code>ticket-4</code></td><td>法域の必要書類(故障診断書/使用部品記録/安全試験記録/ブランド真贋確認記録等)が充足していない状態での提案</td><td>0.9</td></tr>
+        <tr><td><code>brand-authenticity-unconfirmed</code></td><td><code>brand/screen</code></td><td><code>ticket-5</code></td><td>ticket-5 はブランド品だがブランド真贋確認が未完了 -- 修理完了/返却提案は進められない</td><td>0.95</td></tr>
+        <tr><td><code>already-completed</code></td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>ticket-1 は既に修理完了済み</td><td>0.9</td></tr>
+        <tr><td><code>already-returned</code></td><td><code>item/return</code></td><td><code>ticket-1</code></td><td>ticket-1 は既に返却済み</td><td>0.9</td></tr>
       </tbody>
     </table>
   </section>
@@ -2553,11 +2553,66 @@ img,svg { max-width: 100%; height: auto; }</style></head><body>
   </section>
   <section class="card">
     <h2>Approver attribution</h2>
-    <p class="muted">Derived at render time: for every approval this run granted, the committed register is read back and checked for an approver key. <em>Retained in record</em> means the approver survived the store write and is queryable from the SSoT. <em>Audit only</em> means the approval is provable from the append-only ledger but the register itself did not keep it — reported explicitly, because silently omitting it would make “nobody approved” indistinguishable from “the store didn't keep it”.</p>
+    <p class="muted">Derived at render time, not asserted: for every approval this run granted, the register that op wrote to is read back and checked for an approver key. <em>Retained in record</em> means the approver survived the store write and is queryable from the SSoT. <em>Audit only</em> means the approval is provable from the run's audit trail but the register itself did not keep it — labelled explicitly, because silently omitting it would make “nobody approved” indistinguishable from “the store didn't keep it”. These rows self-correct if store retention changes.</p>
+    <p class="muted"><strong>Measured on this run:</strong> the approver's identity reaches the <em>graph audit channel</em> only. <code>leathergoods.operation</code>'s <code>:commit</code> node appends just a <code>:committed</code> fact to the store ledger, so <code>op-1</code> appears nowhere in the durable ledger below — the 6 approvals in this run are recoverable only from the run-level trail.</p>
     <table>
       <thead><tr><th>Op</th><th>Ticket</th><th>Approved by (audit fact)</th><th>Register written</th><th>Attribution in register</th></tr></thead>
       <tbody>
-
+        <tr><td><code>jurisdiction/assess</code></td><td><code>ticket-1</code></td><td>op-1</td><td><code>assessments</code></td><td><span class="ok">retained in record &middot; op-1</span></td></tr>
+        <tr><td><code>safety/screen</code></td><td><code>ticket-1</code></td><td>op-1</td><td><code>safety-screenings</code></td><td><span class="ok">retained in record &middot; op-1</span></td></tr>
+        <tr><td><code>brand/screen</code></td><td><code>ticket-1</code></td><td>op-1</td><td><code>brand-screenings</code></td><td><span class="ok">retained in record &middot; op-1</span></td></tr>
+        <tr><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>op-1</td><td><code>completion-history</code></td><td><span class="warn">audit only — not retained in record</span></td></tr>
+        <tr><td><code>item/return</code></td><td><code>ticket-1</code></td><td>op-1</td><td><code>return-history</code></td><td><span class="warn">audit only — not retained in record</span></td></tr>
+        <tr><td><code>jurisdiction/assess</code></td><td><code>ticket-3</code></td><td>op-1</td><td><code>assessments</code></td><td><span class="ok">retained in record &middot; op-1</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Graph audit channel (this run)</h2>
+    <p class="muted">The actor's own <code>:audit</code> channel — strictly richer than the durable ledger. It carries every advisor proposal trace, every <code>:approval-requested</code> pause and every <code>:approval-granted</code> resume. 40 facts, versus 14 in the store ledger.</p>
+    <table>
+      <thead><tr><th>Fact</th><th>Op</th><th>Ticket</th><th>Summary / reason</th><th>Confidence</th></tr></thead>
+      <tbody>
+        <tr><td>repairopsllm-proposal</td><td><code>ticket/intake</code></td><td><code>ticket-1</code></td><td>修理票記録更新: (:id :customer)</td><td>0.97</td></tr>
+        <tr><td>committed</td><td><code>ticket/intake</code></td><td><code>ticket-1</code></td><td>修理票記録更新: (:id :customer)</td><td></td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>jurisdiction/assess</code></td><td><code>ticket-1</code></td><td>JPN (経済産業省 (Ministry of Economy, Trade and Industry, METI)) 向け必要書類 4 件を提案</td><td>0.9</td></tr>
+        <tr><td>approval-requested</td><td><code>jurisdiction/assess</code></td><td><code>ticket-1</code></td><td>phase-approval</td><td>0.9</td></tr>
+        <tr><td>approval-granted</td><td><code>jurisdiction/assess</code></td><td><code>ticket-1</code></td><td>by op-1</td><td></td></tr>
+        <tr><td>committed</td><td><code>jurisdiction/assess</code></td><td><code>ticket-1</code></td><td>JPN (経済産業省 (Ministry of Economy, Trade and Industry, METI)) 向け必要書類 4 件を提案</td><td></td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>safety/screen</code></td><td><code>ticket-1</code></td><td>Sakura Tanaka: 安全試験合格</td><td>0.9</td></tr>
+        <tr><td>approval-requested</td><td><code>safety/screen</code></td><td><code>ticket-1</code></td><td>phase-approval</td><td>0.9</td></tr>
+        <tr><td>approval-granted</td><td><code>safety/screen</code></td><td><code>ticket-1</code></td><td>by op-1</td><td></td></tr>
+        <tr><td>committed</td><td><code>safety/screen</code></td><td><code>ticket-1</code></td><td>Sakura Tanaka: 安全試験合格</td><td></td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>brand/screen</code></td><td><code>ticket-1</code></td><td>Sakura Tanaka: ブランド品ではない -- 真贋確認は不要</td><td>0.9</td></tr>
+        <tr><td>approval-requested</td><td><code>brand/screen</code></td><td><code>ticket-1</code></td><td>phase-approval</td><td>0.9</td></tr>
+        <tr><td>approval-granted</td><td><code>brand/screen</code></td><td><code>ticket-1</code></td><td>by op-1</td><td></td></tr>
+        <tr><td>committed</td><td><code>brand/screen</code></td><td><code>ticket-1</code></td><td>Sakura Tanaka: ブランド品ではない -- 真贋確認は不要</td><td></td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>ticket-1 向け修理完了提案 (customer=Sakura Tanaka)</td><td>0.9</td></tr>
+        <tr><td>approval-requested</td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>actuation</td><td>0.9</td></tr>
+        <tr><td>approval-granted</td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>by op-1</td><td></td></tr>
+        <tr><td>committed</td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>ticket-1 向け修理完了提案 (customer=Sakura Tanaka)</td><td></td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>item/return</code></td><td><code>ticket-1</code></td><td>ticket-1 向け返却提案 (customer=Sakura Tanaka)</td><td>0.9</td></tr>
+        <tr><td>approval-requested</td><td><code>item/return</code></td><td><code>ticket-1</code></td><td>actuation</td><td>0.9</td></tr>
+        <tr><td>approval-granted</td><td><code>item/return</code></td><td><code>ticket-1</code></td><td>by op-1</td><td></td></tr>
+        <tr><td>committed</td><td><code>item/return</code></td><td><code>ticket-1</code></td><td>ticket-1 向け返却提案 (customer=Sakura Tanaka)</td><td></td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>jurisdiction/assess</code></td><td><code>ticket-2</code></td><td>ATL の公式spec-basisが見つかりません</td><td>0.9</td></tr>
+        <tr><td>governor-hold</td><td><code>jurisdiction/assess</code></td><td><code>ticket-2</code></td><td></td><td>0.9</td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>jurisdiction/assess</code></td><td><code>ticket-3</code></td><td>JPN (経済産業省 (Ministry of Economy, Trade and Industry, METI)) 向け必要書類 4 件を提案</td><td>0.9</td></tr>
+        <tr><td>approval-requested</td><td><code>jurisdiction/assess</code></td><td><code>ticket-3</code></td><td>phase-approval</td><td>0.9</td></tr>
+        <tr><td>approval-granted</td><td><code>jurisdiction/assess</code></td><td><code>ticket-3</code></td><td>by op-1</td><td></td></tr>
+        <tr><td>committed</td><td><code>jurisdiction/assess</code></td><td><code>ticket-3</code></td><td>JPN (経済産業省 (Ministry of Economy, Trade and Industry, METI)) 向け必要書類 4 件を提案</td><td></td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>repair/complete</code></td><td><code>ticket-3</code></td><td>ticket-3 向け修理完了提案 (customer=鈴木一郎)</td><td>0.3</td></tr>
+        <tr><td>governor-hold</td><td><code>repair/complete</code></td><td><code>ticket-3</code></td><td></td><td>0.3</td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>safety/screen</code></td><td><code>ticket-4</code></td><td>田中花子: 修理後安全試験の不合格を検出</td><td>0.95</td></tr>
+        <tr><td>governor-hold</td><td><code>safety/screen</code></td><td><code>ticket-4</code></td><td></td><td>0.95</td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>repair/complete</code></td><td><code>ticket-4</code></td><td>ticket-4 向け修理完了提案 (customer=田中花子)</td><td>0.9</td></tr>
+        <tr><td>governor-hold</td><td><code>repair/complete</code></td><td><code>ticket-4</code></td><td></td><td>0.9</td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>brand/screen</code></td><td><code>ticket-5</code></td><td>佐藤次郎: ブランド真贋確認が未完了</td><td>0.95</td></tr>
+        <tr><td>governor-hold</td><td><code>brand/screen</code></td><td><code>ticket-5</code></td><td></td><td>0.95</td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>ticket-1 向け修理完了提案 (customer=Sakura Tanaka)</td><td>0.9</td></tr>
+        <tr><td>governor-hold</td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td></td><td>0.9</td></tr>
+        <tr><td>repairopsllm-proposal</td><td><code>item/return</code></td><td><code>ticket-1</code></td><td>ticket-1 向け返却提案 (customer=Sakura Tanaka)</td><td>0.9</td></tr>
+        <tr><td>governor-hold</td><td><code>item/return</code></td><td><code>ticket-1</code></td><td></td><td>0.9</td></tr>
       </tbody>
     </table>
   </section>
@@ -2567,20 +2622,20 @@ img,svg { max-width: 100%; height: auto; }</style></head><body>
     <table>
       <thead><tr><th>Fact</th><th>Op</th><th>Ticket</th><th>Basis</th></tr></thead>
       <tbody>
-        <tr><td>committed</td><td><code>intake</code></td><td><code>ticket-1</code></td><td>id, customer</td></tr>
-        <tr><td>committed</td><td><code>assess</code></td><td><code>ticket-1</code></td><td>消費生活用製品安全法 (Consumer Product Safety Act), https://www.meti.go.jp/product_safety/</td></tr>
-        <tr><td>committed</td><td><code>screen</code></td><td><code>ticket-1</code></td><td>safety-check</td></tr>
-        <tr><td>committed</td><td><code>screen</code></td><td><code>ticket-1</code></td><td>brand-determination</td></tr>
-        <tr><td>committed</td><td><code>complete</code></td><td><code>ticket-1</code></td><td>ticket-1</td></tr>
-        <tr><td>committed</td><td><code>return</code></td><td><code>ticket-1</code></td><td>ticket-1</td></tr>
-        <tr><td>governor-hold</td><td><code>assess</code></td><td><code>ticket-2</code></td><td>no-spec-basis</td></tr>
-        <tr><td>committed</td><td><code>assess</code></td><td><code>ticket-3</code></td><td>消費生活用製品安全法 (Consumer Product Safety Act), https://www.meti.go.jp/product_safety/</td></tr>
-        <tr><td>governor-hold</td><td><code>complete</code></td><td><code>ticket-3</code></td><td>parts-cost-mismatch</td></tr>
-        <tr><td>governor-hold</td><td><code>screen</code></td><td><code>ticket-4</code></td><td>safety-test-not-passed</td></tr>
-        <tr><td>governor-hold</td><td><code>complete</code></td><td><code>ticket-4</code></td><td>evidence-incomplete</td></tr>
-        <tr><td>governor-hold</td><td><code>screen</code></td><td><code>ticket-5</code></td><td>brand-authenticity-unconfirmed</td></tr>
-        <tr><td>governor-hold</td><td><code>complete</code></td><td><code>ticket-1</code></td><td>already-completed</td></tr>
-        <tr><td>governor-hold</td><td><code>return</code></td><td><code>ticket-1</code></td><td>already-returned</td></tr>
+        <tr><td>committed</td><td><code>ticket/intake</code></td><td><code>ticket-1</code></td><td>id, customer</td></tr>
+        <tr><td>committed</td><td><code>jurisdiction/assess</code></td><td><code>ticket-1</code></td><td>消費生活用製品安全法 (Consumer Product Safety Act), https://www.meti.go.jp/product_safety/</td></tr>
+        <tr><td>committed</td><td><code>safety/screen</code></td><td><code>ticket-1</code></td><td>safety-check</td></tr>
+        <tr><td>committed</td><td><code>brand/screen</code></td><td><code>ticket-1</code></td><td>brand-determination</td></tr>
+        <tr><td>committed</td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>ticket-1</td></tr>
+        <tr><td>committed</td><td><code>item/return</code></td><td><code>ticket-1</code></td><td>ticket-1</td></tr>
+        <tr><td>governor-hold</td><td><code>jurisdiction/assess</code></td><td><code>ticket-2</code></td><td>no-spec-basis</td></tr>
+        <tr><td>committed</td><td><code>jurisdiction/assess</code></td><td><code>ticket-3</code></td><td>消費生活用製品安全法 (Consumer Product Safety Act), https://www.meti.go.jp/product_safety/</td></tr>
+        <tr><td>governor-hold</td><td><code>repair/complete</code></td><td><code>ticket-3</code></td><td>parts-cost-mismatch</td></tr>
+        <tr><td>governor-hold</td><td><code>safety/screen</code></td><td><code>ticket-4</code></td><td>safety-test-not-passed</td></tr>
+        <tr><td>governor-hold</td><td><code>repair/complete</code></td><td><code>ticket-4</code></td><td>evidence-incomplete</td></tr>
+        <tr><td>governor-hold</td><td><code>brand/screen</code></td><td><code>ticket-5</code></td><td>brand-authenticity-unconfirmed</td></tr>
+        <tr><td>governor-hold</td><td><code>repair/complete</code></td><td><code>ticket-1</code></td><td>already-completed</td></tr>
+        <tr><td>governor-hold</td><td><code>item/return</code></td><td><code>ticket-1</code></td><td>already-returned</td></tr>
       </tbody>
     </table>
   </section>

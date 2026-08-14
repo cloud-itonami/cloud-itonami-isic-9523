@@ -45,12 +45,18 @@
 (def ^:private operator
   {:actor-id "op-1" :actor-role :repair-technician :phase 3})
 
-(defn- exec! [actor tid request]
-  (g/run* actor {:request request :context operator} {:thread-id tid}))
-
-(defn- approve! [actor tid]
-  (g/run* actor {:approval {:status :approved :by "op-1"}}
-          {:thread-id tid :resume? true}))
+(defn- record-run!
+  "Keeps the FINAL `:audit` channel of each graph thread, last write per
+  thread-id winning. Necessary because the `:audit` channel's reducer is
+  `into`: a resumed run's state already contains the pre-interrupt
+  facts, so naively concatenating every run would double-count them."
+  [runs tid result]
+  (let [a (vec (get-in result [:state :audit]))]
+    (swap! runs (fn [v]
+                  (if-let [i (first (keep-indexed #(when (= tid (first %2)) %1) v))]
+                    (assoc v i [tid a])
+                    (conj v [tid a])))))
+  result)
 
 (defn run-demo!
   "Runs a fresh seeded store through a scenario that reaches every
@@ -87,44 +93,58 @@
     :already-completed              ticket-1's repair, completed twice.
     :already-returned               ticket-1's item, returned twice.
 
-  Returns the resulting store."
+  Returns `{:db store :audit [run-level audit facts]}`. The two are NOT
+  the same trail, and the page shows both: the store ledger is the
+  durable SSoT record (`:committed` / `:governor-hold` only), while the
+  graph's `:audit` channel additionally carries the advisor traces and
+  the `:approval-requested` / `:approval-granted` facts that the commit
+  path never appends to the ledger."
   []
   (let [db (store/seed-db)
-        actor (op/build db)]
+        actor (op/build db)
+        runs (atom [])
+        exec! (fn [tid request]
+                (record-run! runs tid
+                             (g/run* actor {:request request :context operator}
+                                     {:thread-id tid})))
+        approve! (fn [tid]
+                   (record-run! runs tid
+                                (g/run* actor {:approval {:status :approved :by "op-1"}}
+                                        {:thread-id tid :resume? true})))]
     ;; ---- ticket-1: the one clean end-to-end lifecycle ----
-    (exec! actor "t1-intake" {:op :ticket/intake :subject "ticket-1"
-                              :patch {:id "ticket-1" :customer "Sakura Tanaka"}})
+    (exec! "t1-intake" {:op :ticket/intake :subject "ticket-1"
+                        :patch {:id "ticket-1" :customer "Sakura Tanaka"}})
 
-    (exec! actor "t1-assess" {:op :jurisdiction/assess :subject "ticket-1"})
-    (approve! actor "t1-assess")
+    (exec! "t1-assess" {:op :jurisdiction/assess :subject "ticket-1"})
+    (approve! "t1-assess")
 
-    (exec! actor "t1-safety" {:op :safety/screen :subject "ticket-1"})
-    (approve! actor "t1-safety")
+    (exec! "t1-safety" {:op :safety/screen :subject "ticket-1"})
+    (approve! "t1-safety")
 
-    (exec! actor "t1-brand" {:op :brand/screen :subject "ticket-1"})
-    (approve! actor "t1-brand")
+    (exec! "t1-brand" {:op :brand/screen :subject "ticket-1"})
+    (approve! "t1-brand")
 
-    (exec! actor "t1-complete" {:op :repair/complete :subject "ticket-1"})
-    (approve! actor "t1-complete")
+    (exec! "t1-complete" {:op :repair/complete :subject "ticket-1"})
+    (approve! "t1-complete")
 
-    (exec! actor "t1-return" {:op :item/return :subject "ticket-1"})
-    (approve! actor "t1-return")
+    (exec! "t1-return" {:op :item/return :subject "ticket-1"})
+    (approve! "t1-return")
 
     ;; ---- the seven HARD holds ----
-    (exec! actor "t2-assess" {:op :jurisdiction/assess :subject "ticket-2" :no-spec? true})
+    (exec! "t2-assess" {:op :jurisdiction/assess :subject "ticket-2" :no-spec? true})
 
-    (exec! actor "t3-assess" {:op :jurisdiction/assess :subject "ticket-3"})
-    (approve! actor "t3-assess")
-    (exec! actor "t3-complete" {:op :repair/complete :subject "ticket-3"})
+    (exec! "t3-assess" {:op :jurisdiction/assess :subject "ticket-3"})
+    (approve! "t3-assess")
+    (exec! "t3-complete" {:op :repair/complete :subject "ticket-3"})
 
-    (exec! actor "t4-safety" {:op :safety/screen :subject "ticket-4"})
-    (exec! actor "t4-complete" {:op :repair/complete :subject "ticket-4"})
+    (exec! "t4-safety" {:op :safety/screen :subject "ticket-4"})
+    (exec! "t4-complete" {:op :repair/complete :subject "ticket-4"})
 
-    (exec! actor "t5-brand" {:op :brand/screen :subject "ticket-5"})
+    (exec! "t5-brand" {:op :brand/screen :subject "ticket-5"})
 
-    (exec! actor "t1-complete-again" {:op :repair/complete :subject "ticket-1"})
-    (exec! actor "t1-return-again" {:op :item/return :subject "ticket-1"})
-    db))
+    (exec! "t1-complete-again" {:op :repair/complete :subject "ticket-1"})
+    (exec! "t1-return-again" {:op :item/return :subject "ticket-1"})
+    {:db db :audit (vec (mapcat second @runs))}))
 
 ;; ----------------------------- rendering -----------------------------
 
@@ -135,10 +155,14 @@
       (str/replace ">" "&gt;")))
 
 (defn- nm
-  "`name` for keywords, identity for everything else -- ledger `:basis`
-  vectors legitimately hold both keywords and citation strings."
+  "Fully-qualified rendering for keywords, identity for everything else
+  -- ledger `:basis` vectors legitimately hold both keywords and
+  citation strings. Deliberately NOT `clojure.core/name`: that drops the
+  namespace, collapsing `:jurisdiction/assess` and `:safety/screen` into
+  bare `assess`/`screen` and making distinct ops look identical on the
+  page."
   [v]
-  (if (keyword? v) (name v) (str v)))
+  (if (keyword? v) (subs (str v) 1) (str v)))
 
 (defn- last-fact-for [ledger ticket-id]
   (last (filter #(= (:subject %) ticket-id) ledger)))
@@ -244,15 +268,22 @@
   (when (map? entry)
     (or (:approved-by entry) (get entry "approved_by") (get entry "approved-by"))))
 
+(defn- approval-facts
+  "The `:approval-granted` facts from the graph's run-level audit
+  channel. MEASURED, not assumed: this actor's commit path appends only
+  `:committed` to the store ledger, so the approver's identity exists
+  ONLY here and never reaches the SSoT."
+  [audit]
+  (filter #(= :approval-granted (:t %)) audit))
+
 (defn- approver-attribution-rows
-  "For every `:approval-granted` fact this run recorded, read the
-  register that op wrote to and report whether the approver survived.
+  "For every approval this run granted, read back the register that op
+  actually wrote to and report whether the approver survived the write.
   Derived at render time on purpose: if `store/commit-record!` later
   retains `:payload` for the actuation effects, these rows flip to
   `retained in record` with no change here."
-  [db ledger]
-  (for [f ledger
-        :when (= :approval-granted (:t f))
+  [db audit]
+  (for [f (approval-facts audit)
         :let [[label reader] (register-readers (:op f))
               entry (when reader (reader db (:subject f)))
               retained (retained-approver entry)]]
@@ -262,6 +293,12 @@
             (if retained
               (str "<span class=\"ok\">retained in record &middot; " (esc retained) "</span>")
               "<span class=\"warn\">audit only — not retained in record</span>"))))
+
+(defn- run-audit-row [{:keys [t op subject summary reason by confidence]}]
+  (format "        <tr><td>%s</td><td><code>%s</code></td><td><code>%s</code></td><td>%s</td><td>%s</td></tr>"
+          (esc (nm t)) (esc (nm (or op :n-a))) (esc subject)
+          (esc (or summary (some-> reason nm) (some->> by (str "by ")) ""))
+          (esc (or confidence ""))))
 
 (defn- ledger-row [{:keys [t op subject disposition basis]}]
   (format "        <tr><td>%s</td><td><code>%s</code></td><td><code>%s</code></td><td>%s</td></tr>"
@@ -282,7 +319,7 @@
 (defn render
   "Renders the full operator-console.html document from a store `db`
   that has already run `run-demo!` (or any other real scenario)."
-  [db]
+  [{:keys [db audit]}]
   (let [ledger (vec (store/ledger db))
         tickets (store/all-tickets db)
         holds (filter #(= :governor-hold (:t %)) ledger)
@@ -389,11 +426,25 @@
      ;; ---- 7. approver attribution (derived) ----
      "  <section class=\"card\">\n"
      "    <h2>Approver attribution</h2>\n"
-     "    <p class=\"muted\">Derived at render time: for every approval this run granted, the committed register is read back and checked for an approver key. <em>Retained in record</em> means the approver survived the store write and is queryable from the SSoT. <em>Audit only</em> means the approval is provable from the append-only ledger but the register itself did not keep it — reported explicitly, because silently omitting it would make “nobody approved” indistinguishable from “the store didn't keep it”.</p>\n"
+     "    <p class=\"muted\">Derived at render time, not asserted: for every approval this run granted, the register that op wrote to is read back and checked for an approver key. <em>Retained in record</em> means the approver survived the store write and is queryable from the SSoT. <em>Audit only</em> means the approval is provable from the run's audit trail but the register itself did not keep it — labelled explicitly, because silently omitting it would make “nobody approved” indistinguishable from “the store didn't keep it”. These rows self-correct if store retention changes.</p>\n"
+     "    <p class=\"muted\"><strong>Measured on this run:</strong> the approver's identity reaches the <em>graph audit channel</em> only. <code>leathergoods.operation</code>'s <code>:commit</code> node appends just a <code>:committed</code> fact to the store ledger, so <code>op-1</code> appears nowhere in the durable ledger below — the "
+     (count (approval-facts audit)) " approvals in this run are recoverable only from the run-level trail.</p>\n"
      "    <table>\n"
      "      <thead><tr><th>Op</th><th>Ticket</th><th>Approved by (audit fact)</th><th>Register written</th><th>Attribution in register</th></tr></thead>\n"
      "      <tbody>\n"
-     (str/join "\n" (approver-attribution-rows db ledger)) "\n"
+     (str/join "\n" (approver-attribution-rows db audit)) "\n"
+     "      </tbody>\n"
+     "    </table>\n"
+     "  </section>\n"
+
+     ;; ---- 7b. run-level audit channel ----
+     "  <section class=\"card\">\n"
+     "    <h2>Graph audit channel (this run)</h2>\n"
+     "    <p class=\"muted\">The actor's own <code>:audit</code> channel — strictly richer than the durable ledger. It carries every advisor proposal trace, every <code>:approval-requested</code> pause and every <code>:approval-granted</code> resume. " (count audit) " facts, versus " (count ledger) " in the store ledger.</p>\n"
+     "    <table>\n"
+     "      <thead><tr><th>Fact</th><th>Op</th><th>Ticket</th><th>Summary / reason</th><th>Confidence</th></tr></thead>\n"
+     "      <tbody>\n"
+     (str/join "\n" (map run-audit-row audit)) "\n"
      "      </tbody>\n"
      "    </table>\n"
      "  </section>\n"
@@ -414,7 +465,7 @@
 
 (defn -main [& args]
   (let [out (or (first args) "docs/samples/operator-console.html")
-        db (run-demo!)
+        {:keys [db] :as result} (run-demo!)
         ledger (vec (store/ledger db))
         holds (filter #(= :governor-hold (:t %)) ledger)
         rules (->> holds (mapcat :violations) (map :rule) distinct sort)]
@@ -425,7 +476,7 @@
       (throw (ex-info "render-html: scenario produced ZERO :governor-hold records -- refusing to write a console that does not demonstrate a HARD hold"
                       {:ledger-facts (count ledger)
                        :out out})))
-    (let [html (render db)]
+    (let [html (render result)]
       (.mkdirs (java.io.File. (or (.getParent (java.io.File. ^String out)) ".")))
       (spit out html)
       (println "wrote" out "-" (count ledger) "ledger facts,"
