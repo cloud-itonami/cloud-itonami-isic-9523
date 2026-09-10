@@ -133,7 +133,7 @@ itonami-isic-6492`'s real status-lifecycle bug (ADR-2607071320).
 `leathergoods.store/Store` is implemented by both `MemStore` (atom-
 backed, default for dev/tests/demo) and `DatomicStore` (`langchain.
 db`-backed), proven to satisfy the same contract in
-`test/leathergoods/store_contract_test.clj` -- the same seam every
+`test/leathergoods/store_contract_test.kotoba` -- the same seam every
 sibling actor uses so swapping the SSoT backend is a configuration
 change, not a rewrite.
 
@@ -217,7 +217,7 @@ completing a repair or auto-returning an item).
   integrity checks), grep-verified absent from every prior sibling
   before the claim was finalized.
 - `MemStore` ‖ `DatomicStore` parity is proven by
-  `test/leathergoods/store_contract_test.clj`, the same `:db-api`-
+  `test/leathergoods/store_contract_test.kotoba`, the same `:db-api`-
   driven swap pattern every sibling actor uses.
 - 40 tests / 192 assertions pass; lint is clean; the demo
   (`clojure -M:dev:run`) walks one clean dual-actuation lifecycle plus
