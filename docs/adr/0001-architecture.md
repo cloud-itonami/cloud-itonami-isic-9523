@@ -220,7 +220,7 @@ completing a repair or auto-returning an item).
   `test/leathergoods/store_contract_test.kotoba`, the same `:db-api`-
   driven swap pattern every sibling actor uses.
 - 40 tests / 192 assertions pass; lint is clean; the demo
-  (`clojure -M:dev:run`) walks one clean dual-actuation lifecycle plus
+  (`kbb -M:dev:run`) walks one clean dual-actuation lifecycle plus
   five HARD-hold scenarios end-to-end.
 - `blueprint.edn` required no field-sync fixes this time (already
   correct) -- only the `:maturity` flip itself.
