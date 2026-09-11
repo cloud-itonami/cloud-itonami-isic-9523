@@ -41,7 +41,7 @@
   store ledger (7 commits + 7 holds). The 12 approval facts are exactly
   what the ledger does not keep.
 
-  Usage: `clojure -M:dev:render-html [out-file]`
+  Usage: `kbb -M:dev:render-html [out-file]`
   (default `docs/samples/operator-console.html`)."
   (:require [jp-go-dds.skin]
             [kotoba.lang.text :as str]
@@ -349,7 +349,7 @@
      ;; ---- 1. tickets ----
      "  <section class=\"card\">\n"
      "    <h2>Repair tickets</h2>\n"
-     "    <p class=\"muted\">Demo snapshot — build-time-generated from <code>leathergoods.store/demo-data</code> by driving the real actor graph (<code>leathergoods.operation</code> → <code>leathergoods.governor</code> → <code>leathergoods.store</code>) via <code>clojure -M:dev:render-html</code>.</p>\n"
+     "    <p class=\"muted\">Demo snapshot — build-time-generated from <code>leathergoods.store/demo-data</code> by driving the real actor graph (<code>leathergoods.operation</code> → <code>leathergoods.governor</code> → <code>leathergoods.store</code>) via <code>kbb -M:dev:render-html</code>.</p>\n"
      "    <p class=\"muted\"><strong>Provenance note:</strong> <code>Item</code> and <code>Item type</code> are free-text / declared fields on each seeded ticket record. This repo has <em>no</em> item, leather-species or material taxonomy, so these trace to the ticket's own declared seed value and <em>not</em> to any lookup table. <code>Jurisdiction</code>, by contrast, is looked up in <code>leathergoods.facts/catalog</code> — a jurisdiction absent from that table has no spec-basis at all (see below).</p>\n"
      "    <table>\n"
      "      <thead><tr><th>Ticket</th><th>Customer</th><th>Item</th><th>Item type</th><th>Jurisdiction</th><th>Brand authenticity</th><th>Repair/return status</th><th>Last op status</th></tr></thead>\n"

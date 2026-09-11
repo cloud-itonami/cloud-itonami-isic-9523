@@ -2468,7 +2468,7 @@ img,svg { max-width: 100%; height: auto; }</style></head><body>
 <main>
   <section class="card">
     <h2>Repair tickets</h2>
-    <p class="muted">Demo snapshot — build-time-generated from <code>leathergoods.store/demo-data</code> by driving the real actor graph (<code>leathergoods.operation</code> → <code>leathergoods.governor</code> → <code>leathergoods.store</code>) via <code>clojure -M:dev:render-html</code>.</p>
+    <p class="muted">Demo snapshot — build-time-generated from <code>leathergoods.store/demo-data</code> by driving the real actor graph (<code>leathergoods.operation</code> → <code>leathergoods.governor</code> → <code>leathergoods.store</code>) via <code>kbb -M:dev:render-html</code>.</p>
     <p class="muted"><strong>Provenance note:</strong> <code>Item</code> and <code>Item type</code> are free-text / declared fields on each seeded ticket record. This repo has <em>no</em> item, leather-species or material taxonomy, so these trace to the ticket's own declared seed value and <em>not</em> to any lookup table. <code>Jurisdiction</code>, by contrast, is looked up in <code>leathergoods.facts/catalog</code> — a jurisdiction absent from that table has no spec-basis at all (see below).</p>
     <table>
       <thead><tr><th>Ticket</th><th>Customer</th><th>Item</th><th>Item type</th><th>Jurisdiction</th><th>Brand authenticity</th><th>Repair/return status</th><th>Last op status</th></tr></thead>
