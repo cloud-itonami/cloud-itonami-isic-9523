@@ -1,0 +1,34 @@
+;; What this vertical's robot physically does, declared for
+;; kotoba.robotics.process (kotoba-lang/robotics). `kbb -M:dev:physics` runs it.
+;;
+;; README "Robotics premise": a workbench robot assists fine-motor shoe and
+;; leather-goods repair (stitching, sole/heel replacement, hardware repair),
+;; gated by the Repair Shop Governor (ISIC 9523). Its physical work here is
+;; the sole replacement: heating the worn outsole with hot air until the
+;; adhesive bond line behind it releases, and moving the shoe on its iron
+;; last into the sole press.
+;;
+;; Every number without a cited source is marked `estimate` in its :basis.
+;; Replacing an estimate with a sourced value is this bot's growth work.
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isic-9523"
+ :cases
+ [{:id :outsole-bond-release
+   :kind :thermal
+   :procedure "hot-air nozzle heats the worn 6 mm rubber outsole from outside until the adhesive bond line between outsole and midsole softens and the sole can be peeled"
+   :params {:thickness-m 0.006 :conductivity-w-mk 0.2 :density-kg-m3 1200.0 :specific-heat-j-kgk 1800.0
+            :t0-c 22.0 :h-front-w-m2k 60.0 :t-back-ambient-c 22.0 :h-back-w-m2k 3.0
+            :threshold-c 70.0 :duration-s 900.0 :nodes 13}
+   :sweep {:param :t-hot-c :values [120.0 150.0 180.0 210.0 250.0]}
+   :quantity :time-to-threshold-s
+   :limit {:max 180.0 :basis "estimate: bond line at ~70 C (polyurethane / neoprene shoe adhesive softening) within three minutes, before the upper leather is over-heated; rubber properties and hot-air heat transfer coefficient are estimates"}
+   :boundary {:lo 75.0 :hi 400.0}}
+  {:id :shoe-on-last-into-press
+   :kind :manipulator
+   :procedure "arm lifts the shoe on its iron last from the bench and seats it in the sole press"
+   :params {:l1-m 0.35 :l2-m 0.30 :m1-kg 3.0 :m2-kg 2.0
+            :from [0.40 0.05] :to [0.15 0.40] :duration-s 1.5 :steps 400}
+   :sweep {:param :payload-kg :values [0.8 1.5 2.5 3.5 4.5]}
+   :quantity :peak-tau1-nm
+   :limit {:max 25.0 :basis "estimate: continuous shoulder torque of a 3 kg-class benchtop collaborative arm; an iron repair last with a boot on it is taken as up to ~4 kg"}
+   :boundary {:lo 0.2 :hi 15.0}}]}
